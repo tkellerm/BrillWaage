@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project BrillWaage">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+    <target name="create_run_jar">
+        <jar destfile="M:/java/projects/BrillWaage/brillwaage.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="de.abasgmbh.brill.waage.WaageWatchService"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="M:/java/projects/BrillWaage/classes"/>
+            <zipfileset excludes="META-INF/*.SF" src="M:/java/projects/BrillWaage/includejar/log4j.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="M:/java/projects/BrillWaage/includejar/jedp.jar"/>
+        </jar>
+    </target>
+</project>

@@ -1,6 +1,7 @@
 package de.abasgmbh.brill.waage.config;
 
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class WaageConfiguration {
 	private String password;
 	private double rotGrenze;
 	private double gelbGrenze;
+	File pidFile;
 	
 	private List<Waage> waagenListe = new ArrayList<Waage>();
 	
@@ -153,6 +155,18 @@ public class WaageConfiguration {
 		this.gelbGrenze = gelbGrenze;
 	}
 
+
+
+	public void setPIDFile(File pidfile) {
+		
+		this.pidFile = pidfile;
+		
+	}
+	
+	public Boolean pidFileexists(){
+		
+		return this.pidFile.exists();
+	}
 	
 
 

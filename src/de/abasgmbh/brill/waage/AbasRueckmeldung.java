@@ -5,7 +5,9 @@ import org.apache.log4j.Logger;
 import sun.security.acl.OwnerImpl;
 import de.abas.ceks.jedp.CantBeginSessionException;
 import de.abas.ceks.jedp.CantChangeFieldValException;
+import de.abas.ceks.jedp.CantReadSettingException;
 import de.abas.ceks.jedp.CantSaveException;
+import de.abas.ceks.jedp.ConnectionLostException;
 import de.abas.ceks.jedp.EDPEditAction;
 import de.abas.ceks.jedp.EDPEditRefType;
 import de.abas.ceks.jedp.EDPEditor;
@@ -38,6 +40,9 @@ public class AbasRueckmeldung implements Runnable {
 	private Double rotGrenze;
 	private Double gelbGrenze;
 	
+	private Boolean isConnected;
+	private WaageConfiguration waageConfiguration;
+	
 	
 	@Override
 	public void run() {
@@ -45,7 +50,27 @@ public class AbasRueckmeldung implements Runnable {
 //		edp prozess session aufbauen
 		this.edpSession = EDPFactory.createEDPSession (); 
 		Boolean errorFlag = false;
-		while (!errorFlag) {
+		while ((!errorFlag || !waageConfiguration.pidFileexists())) {
+			Boolean connetedt = edpSession.isConnected();
+			if (connetedt) {
+				try {
+					
+					String version = edpSession.getABASVersion();
+					version = version;
+					Thread.sleep(1000);
+				} catch (CantReadSettingException e1) {
+					// TODO Auto-generated catch block
+					log.error(e1);
+					edpSession.endSession();
+					this.isConnected = false;
+				}catch (ConnectionLostException e) {
+					log.error(e);
+					edpSession.endSession();
+					this.isConnected = false;
+				} catch (InterruptedException e) {
+					log.error(e);
+				}
+			}
 			if (!edpSession.isConnected()) {
 				try {
 					sessionAufbauen(server, port, mandant, passwort);
@@ -60,7 +85,7 @@ public class AbasRueckmeldung implements Runnable {
 		
 	}
 	
-	public synchronized Integer meldung(Rueckmeldung rueckMeldung) throws EDPException {
+	public synchronized Rueckmeldung meldung(Rueckmeldung rueckMeldung) throws EDPException {
 		Integer wert = 0;
 		if (!this.edpSession.isConnected()) {
 			sessionAufbauen(this.server, this.port, this.mandant, this.passwort);
@@ -80,9 +105,9 @@ public class AbasRueckmeldung implements Runnable {
 //			Rot leuchtet
 			wert = 3;
 		}
-		
+		rueckMeldung.setLed(wert);
 		log.trace("Rückgabe Meldung : Prozent :" + prozent + " rotGrenze : " + this.rotGrenze.toString() + "gelbGrenze : " + this.gelbGrenze.toString() +"  Rückgabe Wert :" + wert);
-		return wert ;
+		return rueckMeldung ;
 	}
 	
 	private Double selectOffeneMengeBa(Rueckmeldung rueckMeldung, EDPQuery query) throws EDPException {
@@ -109,6 +134,7 @@ public class AbasRueckmeldung implements Runnable {
 					Double rueckgemeldeteMenge = new Double(rueckgemeldeteMengeStr);
 					Double gesamtmenge = offeneMenge + rueckgemeldeteMenge;
 					Double prozent = (offeneMenge /gesamtmenge ) * 100;
+					rueckMeldung.setOfMenge(offeneMenge);
 					log.trace("Query Ergebnis : BA : " + betriebauftrag + " offene Menge : " + offeneMengeStr + " Gebuchte Menge : " + rueckgemeldeteMengeStr +   " prozent " + prozent.toString());
 					return prozent;
 					
@@ -169,6 +195,7 @@ public class AbasRueckmeldung implements Runnable {
 			this.passwort = configuration.getPassword();
 			this.gelbGrenze = configuration.getGelbGrenze();
 			this.rotGrenze = configuration.getRotGrenze();
+			this.waageConfiguration = configuration;
 		}else {
 			String error = "Die Konfiguration hat leider den Wert null!";
 			log.error(error);
@@ -185,8 +212,10 @@ public class AbasRueckmeldung implements Runnable {
     	  		try {
     	  			this.edpSession.setConnectTimeout(TIMEOUT);
     	  			this.edpSession.beginSession(server , port, mandant, passwort, "Waage");
+    	  			this.isConnected = true;
     	  		} catch (CantBeginSessionException ex) 
     	  			{
+    	  			this.isConnected = false;
     	  			log.error(ex);
     	  			throw new CantBeginSessionException("FEHLER\n EDP Session kann nicht gestartet werden\n" , ex);
     	  			}
@@ -195,5 +224,31 @@ public class AbasRueckmeldung implements Runnable {
         
 	        
     }
+
+	public Boolean isConnected() {
+	
+		if (this.edpSession != null) {
+			if (this.edpSession.isConnected()) {
+				//			check Version
+				try {
+					String version = edpSession.getABASVersion();
+					if (version != null) {
+						return true;
+					} else
+						return false;
+				} catch (CantReadSettingException e1) {
+					// TODO Auto-generated catch block
+					log.error("Prüfung isConnected fehlgeschlagen ", e1);
+					return false;
+
+				} catch (ConnectionLostException e) {
+					return false;
+				}
+			} else
+				return false;
+		}else 
+			return false;
+		
+	}
 	
 }

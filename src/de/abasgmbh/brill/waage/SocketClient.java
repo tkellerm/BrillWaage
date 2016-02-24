@@ -1,9 +1,15 @@
 package de.abasgmbh.brill.waage;
 
-import java.net.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
-import java.io.*;
 
 import javax.management.BadAttributeValueExpException;
 
@@ -74,6 +80,7 @@ public class SocketClient extends Thread {
 					try {
 						this.socket = new Socket(waage.getIpadress(),
 								waage.getPort());
+						this.socket.setKeepAlive(true);
 						this.socketadress = socket.getRemoteSocketAddress();
 						log.info("Die Waage" + waage.getName()
 								+ " mit der IP-Adresse " + waage.getIpadress()
@@ -129,7 +136,7 @@ public class SocketClient extends Thread {
         }
         String rueckString = "";
         Boolean rueckMeldungActive = false;
-        while(!desonnected) {
+        while(!waageConfiguration.pidFileexists()) {
         	if (!socket.isConnected()) {
 				log.error("Socket Verbindung zu Waage " + this.waageName + " mit IP " + this.waageIP + " wurde unterbrochen!");
 				
@@ -147,41 +154,43 @@ public class SocketClient extends Thread {
                 if(inputString== null) {
                     //parent.error("Connection closed by client");
                     log.error("Connection closed for waage " + waageName + " mit IP " + waageIP );
-                    boolean isCon = socket.isConnected();
-                    boolean isbound = socket.isBound();
-                    boolean isinputshutdown = socket.isInputShutdown();
-                    boolean isoutputshutdown = socket.isOutputShutdown();
+//                    boolean isCon = socket.isConnected();
+//                    boolean isbound = socket.isBound();
+//                    boolean isinputshutdown = socket.isInputShutdown();
+//                    boolean isoutputshutdown = socket.isOutputShutdown();
                     socket.close();
                     Boolean newSocket = false;
                     while (!newSocket) {
 						try {
 							log.trace("Vor neuer Socketverbindung");							
 							this.socket = new Socket(waageIP , waagePort );
+							this.socket.setKeepAlive(true);
 							log.trace("Nach neuer Socketverbindung");
 							is = socket.getInputStream();
 				            in = new BufferedInputStream(is);
 				            newSocket = true;
 						} catch (IOException e) {
-							log.error("Connection not opend for waage " + waageName + " mit IP " + waageIP , e );
+							log.error(waageName + "Connection not opend for waage " +  " mit IP " + waageIP , e );
 						}	
 					}
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				
                 }
-                if (rueckString != null) {
-				int length = rueckString.length();				
+                if (rueckString != null) {				
                 if (rueckMeldungActive) {
                 	if (inputString.contains(ENDE_ZEICHEN)) {
     					String teilString[] = inputString.split(ENDE_ZEICHEN);
     					if (teilString.length>0) {
 							rueckString = rueckString + teilString[0];
 							rueckschlange.add(rueckString);
+							log.trace(this.waageName + " RückmeldungString : " + rueckString);
 							rueckMeldungActive = false;
 						}
 						for (int i = 1; i < teilString.length; i++) {
 							if ((teilString[i].contains(ENDE_ZEICHEN)) & (teilString[i].contains(ANFANGS_ZEICHEN))) {
 								rueckschlange.add(teilString[i]);
+								log.trace(this.waageName + " RückmeldungString : " + teilString[1]);
 								rueckMeldungActive = false;
 							}else if (teilString[i].contains(ANFANGS_ZEICHEN)) {
 									rueckString = teilString[i];
@@ -205,6 +214,7 @@ public class SocketClient extends Thread {
 							for (int i = 1; i < teilString.length; i++) {
 								if (teilString[i].contains(ENDE_ZEICHEN)) {
 									rueckschlange.add(teilString[1]);
+									log.trace(this.waageName + " RückmeldungString : " + teilString[1]);
 									rueckMeldungActive = false;
 								}else {
 									rueckString = teilString[i];
@@ -222,28 +232,28 @@ public class SocketClient extends Thread {
 					rueckMeldung = new Rueckmeldung(rueckMeldungString);
 				
                 if (rueckMeldung.isRueckmeldung()) {
-				
-                	Integer led = this.abasrueckmeldung.meldung(rueckMeldung);
+                	rueckMeldung = this.abasrueckmeldung.meldung(rueckMeldung);
+                	Integer led = rueckMeldung.getLed(); 
                     switch (led) {
     				case 1:
 //    					grüne Lampe anschalten
-    					lampeAnschalten(LEDS.GREEN);
+    					rueckmeldungAnWaageSenden(LEDS.GREEN,rueckMeldung.getOfMenge());
     					break;
     				case 2:
 //    					gelbe Lampe anschalten
-    					lampeAnschalten(LEDS.YELLOW);
+    					rueckmeldungAnWaageSenden(LEDS.YELLOW,rueckMeldung.getOfMenge());
     					break;
     				case 3:
 //    					rote Lampe anschalten
-    					lampeAnschalten(LEDS.RED);
+    					rueckmeldungAnWaageSenden(LEDS.RED,rueckMeldung.getOfMenge());
     					break;
     				case 4:
 //    					leiser Piepser anschalten
-    					lampeAnschalten(LEDS.PIEPSLEISE);
+    					rueckmeldungAnWaageSenden(LEDS.PIEPSLEISE,rueckMeldung.getOfMenge());
     					break;
     				case 5:
 //    					lauter Piepser anschalten
-    					lampeAnschalten(LEDS.PIEPSLAUT);
+    					rueckmeldungAnWaageSenden(LEDS.PIEPSLAUT,rueckMeldung.getOfMenge());
     					break;	
     				default:
     					break;
@@ -288,25 +298,37 @@ public class SocketClient extends Thread {
         socket=null;
     }//end of run
     
-    private void fehlerAnWaage(String string) {
-		lampeAnschalten(LEDS.PIEPSLAUT);
-		sendText(string);
-		
+    private void rueckmeldungAnWaageSenden(LEDS led, Double ofMenge) {
+    	lampeAnschalten(led);
+    	sendText("offene Menge : " + ofMenge.toString());
+    	waageZurücksetzen();
 	}
 
+	private void fehlerAnWaage(String string) {
+		lampeAnschalten(LEDS.PIEPSLAUT);
+		sendText(string);
+		waageZurücksetzen();
+		
+	}
+    
 	private void sendText(String string) {
 		String befehl = "<CA" + string + "><NO" + textZeit.toString() + "><CC>";
     	sendMessage(befehl);
-    	System.out.println("<CA" + " " + string);
-    	log.info("<CA" + " " + string);
+    	log.info(waageName + " <CA" + " " + string);
 		
 	}
-
+	
+	private void waageZurücksetzen() {
+		String befehl = "<FR>";
+    	sendMessage(befehl);
+    	log.info(waageName + " Waage zurücksetzen " + befehl);
+		
+	} 
 	private void lampeAnschalten(LEDS led) {
 		// TODO Auto-generated method stub
     	String befehl = led.getAnschaltCmdString() + "<NO" + leuchtZeit.toString() + ">" + led.getAusschaltCmdString();
     	sendMessage(befehl);
-    	log.info("Lampen Befehl : " + led.name() + " " + befehl);
+    	log.info(waageName + " Lampen Befehl : " + led.name() + " " + befehl);
 	}
 
 	private static String readInputStream(BufferedInputStream _in) throws IOException {

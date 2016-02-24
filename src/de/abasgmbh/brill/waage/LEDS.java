@@ -12,12 +12,12 @@ private String[] eintrag;
 	
 	public String getAusschaltCmdString(){
 //		return eintrag[0];
-//		Änderung da Waage bei Brill anders eingestellt sind mit Schwellwert 999999
+//		Demo Gerät ist anderes Programmiert gewesen daher der Tausch
 		return eintrag[1];
 	}
 	public String getAnschaltCmdString(){
-//		Änderung da Waage bei Brill anders eingestellt sind mit Schwellwert 999999
 //		return eintrag[1];
+//		Demo Gerät ist anderes Programmiert gewesen daher der Tausch
 		return eintrag[0];
 	}
 }

@@ -16,6 +16,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
@@ -50,19 +51,40 @@ public class WaageWatchService {
         } else {
             log.error(exitMessage);
             System.err.println("[ERROR] " + exitMessage);
+            System.out.println("[ERROR] " + exitMessage);
         }
+        if (pidfile != null) {
+        	pidfile.delete();	
+		}
+        
         Runtime.getRuntime().exit(exitCode);
     }
 
     private static void exit(int exitCode, final Throwable e) {
         log.error(e.getMessage(), e);
         System.err.println("[ERROR] " + e.getMessage());
+        if (pidfile != null) {
+        	pidfile.delete();	
+		}
+        try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e1) {
+			log.error("Beim Beenden konnte der Thread nicht schlafen gelegt werden!" , e1);
+		}
         Runtime.getRuntime().exit(exitCode);
     }
 
     private static void exit(int exitCode, String exitMessage, Throwable e) {
         log.error(exitMessage + " # " + e.getMessage(), e);
         System.err.println("[ERROR] " + exitMessage + " # " + e.getMessage());
+        if (pidfile != null) {
+        	pidfile.delete();	
+		}
+        try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e1) {
+			log.error("Beim Beenden konnte der Thread nicht schlafen gelegt werden!" , e1);
+		}
         Runtime.getRuntime().exit(exitCode);
     }
 
@@ -70,6 +92,7 @@ public class WaageWatchService {
      *
      * @param args
      *            args[0] : configuration file
+     * @throws ConnectException 
      */
     public static void main(String[] args) {
         /*
@@ -112,6 +135,7 @@ public class WaageWatchService {
                     log.info("stopping process...");
                     try {
                         Runtime.getRuntime().exec("kill -9 " + runningPID);
+                        pidfile.delete();
                     } catch (IOException e1) {
                         exit(1, "[" + runningPID + "] Could not stop service.", e1);
                     }
@@ -120,6 +144,7 @@ public class WaageWatchService {
                 exit(1, "[error] Process already running (pid " + runningPID + ") ...");
             } else {
                 if (stopService) {
+                	pidfile.delete();
                     exit(0, "Specified WaagenWatchService is not running.");
                 }
                 // else: Write PID to PID file
@@ -138,53 +163,74 @@ public class WaageWatchService {
             } catch (IOException e) {
             }
         }
-
-        /*
-         * Configuration
-         */
-        try {
-        	
-        	waageConfigurationReader.read(cfgFile);
-            
-        } catch (IOException e) {
-            exit(1, e);
-        }
-
-        /*
-         * Existing files
-         */
-        log.info("Handle existing files...");
-        
-
-        log.info("Starting WaagenWatchservice...");
         
 //      AbasRueckmeldung erzeugen
         
-        AbasRueckmeldung abasrueck;
-		Thread threadAbas = new Thread(abasrueck = new AbasRueckmeldung(waageConfigurationReader.getConfiguration()));
-		threadAbas.start();
-		if (threadAbas.isAlive()) {
-			log.info("abasrueckmeldung Thread wurde erzeugt");
-//			Die einzelnen Waagenüberwachungen starten
-			boolean alive = threadAbas.isAlive();
+        if (!stopService) {
+			/*
+			 * Configuration
+			 */
 			try {
-				
-					for (int i = 0; i < waageConfigurationReader.getConfiguration().getAnzahlWaagen() ; i++) {
-						log.trace("WaageThread " + i + " wird gestartet");
-						SocketClient socket = new SocketClient(waageConfigurationReader.getConfiguration() , i , abasrueck);
-					}
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				log.error(e);
+
+				waageConfigurationReader.read(cfgFile);
+				configuration = waageConfigurationReader.getConfiguration();
+				configuration.setPIDFile(pidfile);
+
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				log.error(e);
+				exit(1, e);
 			}
-		}else {
-			System.err.println("abasrueckmeldung Thread konnte nicht erzeugt werden");
-			log.error("abasrueckmeldung Thread konnte nicht erzeugt werden");
+			/*
+			 * Existing files
+			 */
+			log.info("Handle existing files...");
+			log.info("Starting WaagenWatchservice...");
+			AbasRueckmeldung abasrueck;
+			Thread threadAbas = new Thread(abasrueck = new AbasRueckmeldung(
+					waageConfigurationReader.getConfiguration()));
+			threadAbas.start();
+			Long wartezaehler = new Long(0);
+			if (abasrueck == null) {
+				throw new NullPointerException(
+						"Es wurde kein Object abasRückmeldung angelegt!");
+			}
+			while (!abasrueck.isConnected()) {
+				wartezaehler = wartezaehler + 1;
+				if (wartezaehler % 100 == 0) {
+					log.info(wartezaehler.toString()
+							+ "   Warten bis EDP-Verbindung steht");
+				}
+				if (wartezaehler > 10000000) {
+					exit(1,
+							"Es konnte keine EDP-Verbindung hergestellt werden! Der Waagen service hat sich beendet!");
+				}
+			}
+			if (threadAbas.isAlive()) {
+				log.info("abasrueckmeldung Thread wurde erzeugt");
+				//			Die einzelnen Waagenüberwachungen starten
+				boolean alive = threadAbas.isAlive();
+				try {
+
+					for (int i = 0; i < waageConfigurationReader
+							.getConfiguration().getAnzahlWaagen(); i++) {
+						log.trace("WaageThread " + i + " wird gestartet");
+						SocketClient socket = new SocketClient(
+								waageConfigurationReader.getConfiguration(), i,
+								abasrueck);
+					}
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					log.error(e);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					log.error(e);
+				}
+			} else {
+				System.err
+						.println("abasrueckmeldung Thread konnte nicht erzeugt werden");
+				log.error("abasrueckmeldung Thread konnte nicht erzeugt werden");
+			}
 		}
 		
 //      

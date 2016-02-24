@@ -2,6 +2,7 @@ package de.abasgmbh.brill.waage;
 
 public class Rueckmeldung {
 	
+//	Eingabewert
 	private String waagenNummer;
 	private String laufendeNummer;
 	private String betriebsauftrag;
@@ -10,6 +11,45 @@ public class Rueckmeldung {
 	private Double nettoGewicht;
 	private Double stueck;
 	private Double refgewicht;
+	
+//	Rückgabewerte
+	private Integer led;
+	private Double ofMenge;
+	private String fehler;
+	
+	
+	
+	public Integer getLed() {
+		return led;
+	}
+
+
+	public void setLed(Integer led) {
+		this.led = led;
+	}
+
+
+	public Double getOfMenge() {
+		return ofMenge;
+	}
+
+
+	public void setOfMenge(Double ofMenge) {
+		this.ofMenge = ofMenge;
+	}
+
+
+	public String getFehler() {
+		return fehler;
+	}
+
+
+	public void setFehler(String fehler) {
+		this.fehler = fehler;
+	}
+
+
+	
 	
 	
 	public Rueckmeldung(String waagenNummer, String laufendeNummer,

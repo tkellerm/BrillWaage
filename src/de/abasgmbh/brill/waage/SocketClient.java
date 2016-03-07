@@ -301,6 +301,7 @@ public class SocketClient extends Thread {
     private void rueckmeldungAnWaageSenden(LEDS led, Double ofMenge) {
     	lampeAnschalten(led);
     	sendText("offene Menge : " + ofMenge.toString());
+    	labelDrucken();
     	waageZurücksetzen();
 	}
 
@@ -320,10 +321,17 @@ public class SocketClient extends Thread {
 	
 	private void waageZurücksetzen() {
 		String befehl = "<FR>";
+//		<VS0020> löscht den Betriebsauftrag aus der Waage
+		befehl = befehl + "<VS0020>";
     	sendMessage(befehl);
     	log.info(waageName + " Waage zurücksetzen " + befehl);
-		
 	} 
+	private void labelDrucken(){
+		String befehl = "<FP99>";
+    	sendMessage(befehl);
+    	log.info(waageName + " Label drucken" + " " + befehl);
+		
+	}
 	private void lampeAnschalten(LEDS led) {
 		// TODO Auto-generated method stub
     	String befehl = led.getAnschaltCmdString() + "<NO" + leuchtZeit.toString() + ">" + led.getAusschaltCmdString();

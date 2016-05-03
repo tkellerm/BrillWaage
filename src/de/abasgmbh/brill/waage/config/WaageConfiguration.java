@@ -163,8 +163,8 @@ public class WaageConfiguration {
 		
 	}
 	
-	public Boolean pidFileexists(){
-		
+	public synchronized Boolean pidFileexists(){
+//        log.trace("pid-File ist da " + this.pidFile.exists());
 		return this.pidFile.exists();
 	}
 	

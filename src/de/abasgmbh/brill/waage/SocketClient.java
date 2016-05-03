@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
@@ -76,7 +77,7 @@ public class SocketClient extends Thread {
 	    	this.waagePort = waage.getPort();
 	    	
 	    	while (this.socket == null) {
-				if (Util.checkHost(waage.getIpadress())) {
+				if (checkHost(waage.getIpadress())) {
 					try {
 						this.socket = new Socket(waage.getIpadress(),
 								waage.getPort());
@@ -125,6 +126,7 @@ public class SocketClient extends Thread {
         try {
             is = socket.getInputStream();
             in = new BufferedInputStream(is);
+            log.trace("an Stream horchen" );
         } catch(IOException e) {
             try {
                 socket.close();
@@ -136,7 +138,9 @@ public class SocketClient extends Thread {
         }
         String rueckString = "";
         Boolean rueckMeldungActive = false;
-        while(!waageConfiguration.pidFileexists()) {
+        while(waageConfiguration.pidFileexists()) {
+        	
+        	log.trace("Schleife Socketclient");
         	if (!socket.isConnected()) {
 				log.error("Socket Verbindung zu Waage " + this.waageName + " mit IP " + this.waageIP + " wurde unterbrochen!");
 				
@@ -151,6 +155,7 @@ public class SocketClient extends Thread {
         	 ArrayList<String> rueckschlange = new ArrayList<String>();
         	try {
                 String inputString = readInputStream(in); //in.readLine();
+                log.info(waageName + " : " + inputString);
                 if(inputString== null) {
                     //parent.error("Connection closed by client");
                     log.error("Connection closed for waage " + waageName + " mit IP " + waageIP );
@@ -177,6 +182,7 @@ public class SocketClient extends Thread {
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				
                 }
+                
                 if (rueckString != null) {				
                 if (rueckMeldungActive) {
                 	if (inputString.contains(ENDE_ZEICHEN)) {
@@ -230,7 +236,7 @@ public class SocketClient extends Thread {
                 for (String rueckMeldungString : rueckschlange) {
 
 					rueckMeldung = new Rueckmeldung(rueckMeldungString);
-				
+					
                 if (rueckMeldung.isRueckmeldung()) {
                 	rueckMeldung = this.abasrueckmeldung.meldung(rueckMeldung);
                 	Integer led = rueckMeldung.getLed(); 
@@ -290,6 +296,7 @@ public class SocketClient extends Thread {
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			}
         }//end of while
+        log.trace(waageName + " PID FILE nicht gefunden - Socketclient wird beendet");
         try	{
             is.close();
             in.close();
@@ -321,13 +328,13 @@ public class SocketClient extends Thread {
 	
 	private void waageZurücksetzen() {
 		String befehl = "<FR>";
-//		<VS0020> löscht den Betriebsauftrag aus der Waage
+//		<VS0020> löscht den Betriebsauftrag aus der Waage 
 		befehl = befehl + "<VS0020>";
     	sendMessage(befehl);
     	log.info(waageName + " Waage zurücksetzen " + befehl);
 	} 
 	private void labelDrucken(){
-		String befehl = "<FP99>";
+		String befehl = "<FP099>";
     	sendMessage(befehl);
     	log.info(waageName + " Label drucken" + " " + befehl);
 		
@@ -379,4 +386,20 @@ public class SocketClient extends Thread {
 				}
         }
     }
+
+    private  boolean checkHost(String host) {
+        try {
+            InetAddress adress = InetAddress.getByName(host);
+            
+            boolean erreichbar = adress.isReachable(5000);
+            return erreichbar;
+        } catch(UnknownHostException e) {
+        	log.error(this.waageName + " ist mit der Adresse " + host + " unbekannt " , e);
+        	return(false);
+        } catch (IOException e) {
+        	log.error(this.waageName + " ist mit der Adresse " + host + " nicht ereichbar " , e);
+        	return(false);
+		}
+    }
+
 }

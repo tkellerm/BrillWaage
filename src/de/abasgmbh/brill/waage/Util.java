@@ -14,11 +14,16 @@ public class Util {
     
     public static boolean checkHost(String host) {
         try {
-            InetAddress.getByName(host);
-            return(true);
+            InetAddress adress = InetAddress.getByName(host);
+            
+            boolean erreichbar = adress.isReachable(5000);
+            return erreichbar;
         } catch(UnknownHostException uhe) {
             return(false);
-        }
+        } catch (IOException e) {
+        	return(false);
+			
+		}
     }
     
     public static void writeFile(String fileName, String text)

@@ -221,10 +221,6 @@ public class WaageWatchService {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 					log.error(e);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					log.error(e);
 				}
 			} else {
 				System.err

@@ -126,7 +126,7 @@ public class SocketClient extends Thread {
         try {
             is = socket.getInputStream();
             in = new BufferedInputStream(is);
-            log.trace("an Stream horchen" );
+            log.trace(waageName + " an Stream horchen" );
         } catch(IOException e) {
             try {
                 socket.close();

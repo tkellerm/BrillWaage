@@ -20,7 +20,7 @@ public class WaageConfiguration {
 	private String password;
 	private double rotGrenze;
 	private double gelbGrenze;
-	File pidFile;
+	private File pidFile;
 	
 	private List<Waage> waagenListe = new ArrayList<Waage>();
 	
@@ -165,7 +165,19 @@ public class WaageConfiguration {
 	
 	public synchronized Boolean pidFileexists(){
 //        log.trace("pid-File ist da " + this.pidFile.exists());
-		return this.pidFile.exists();
+		if (this.pidFile.exists()) {
+			return true;
+		}else {
+			log.trace("pid-File " + this.pidFile.getAbsolutePath() + " nicht ist da " + this.pidFile.exists());
+			File test = new File(this.pidFile.getAbsolutePath());
+			if (test.exists()) {
+				return true;
+			}else {
+				log.trace("pid-File " + test.getAbsolutePath() + " auch bei der 2. Prüfung nicht ist da " + test.exists());
+				return false;
+			}
+		}
+		
 	}
 	
 

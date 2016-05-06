@@ -157,6 +157,12 @@ public class WaageConfiguration {
 
 
 
+	public File getPidFile() {
+		return pidFile;
+	}
+
+
+
 	public void setPIDFile(File pidfile) {
 		
 		this.pidFile = pidfile;

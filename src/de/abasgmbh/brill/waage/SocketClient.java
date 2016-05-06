@@ -2,6 +2,7 @@ package de.abasgmbh.brill.waage;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -9,12 +10,15 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.management.BadAttributeValueExpException;
 
 import org.apache.log4j.Logger;
+
+import com.sun.org.apache.xpath.internal.operations.Bool;
 
 import de.abas.ceks.jedp.CantBeginEditException;
 import de.abas.ceks.jedp.CantBeginSessionException;
@@ -136,27 +140,41 @@ public class SocketClient extends Thread {
             
             return;
         }
+        File pidFileSicherung = waageConfiguration.getPidFile();
         String rueckString = "";
         Boolean rueckMeldungActive = false;
-        while(waageConfiguration.pidFileexists()) {
-        	
+        Boolean errorFlag =false;
+        Boolean reconnect = false;
+        while(!errorFlag) {
         	log.trace("Schleife Socketclient");
+//        	Änderung da der direkte Aufruf von pidFileexists in die Hose ging.
+        	if (!waageConfiguration.pidFileexists()) {
+				log.info("pid-File existiert nicht mehr");
+				File pidfile = waageConfiguration.getPidFile();
+				log.error("Das PID-File hat den Namen " + pidfile.getAbsolutePath() +" und das PID-Sicherung " + pidFileSicherung.getAbsolutePath());
+				if (!pidfile.exists()) {
+					log.error("Das pidfile existiert nicht!");
+					if (!pidFileSicherung.exists()) {
+						log.error("Das pidfileSicherung existiert auch nicht!");
+						errorFlag = true;	
+						
+					}else {
+						log.error("Das pidfileSicherung existiert!");
+					}
+						
+				}
+				
+			}
         	if (!socket.isConnected()) {
 				log.error("Socket Verbindung zu Waage " + this.waageName + " mit IP " + this.waageIP + " wurde unterbrochen!");
-				
-				try {
-					this.socket.connect(this.socketadress);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					log.error("Fehhler beim Wiederverbinden zu Waage " + this.waageName + " mit IP " + this.waageIP ,e);
-				}
+				reconnect = true;
 			};
         	Rueckmeldung rueckMeldung=null;
         	 ArrayList<String> rueckschlange = new ArrayList<String>();
         	try {
                 String inputString = readInputStream(in); //in.readLine();
                 log.info(waageName + " : " + inputString);
-                if(inputString== null) {
+                if(inputString== null || reconnect) {
                     //parent.error("Connection closed by client");
                     log.error("Connection closed for waage " + waageName + " mit IP " + waageIP );
 //                    boolean isCon = socket.isConnected();
@@ -262,20 +280,19 @@ public class SocketClient extends Thread {
     					rueckmeldungAnWaageSenden(LEDS.PIEPSLAUT,rueckMeldung.getOfMenge());
     					break;	
     				default:
+    					log.info("Break in Case Wert LED : " + led );
     					break;
     				}
                 	
 				}
                 }
                 rueckschlange.clear();
-                
+        	} catch(SocketException e) {
+            	log.error("Socketverbindung wurde unterbrochen!",e);
+            	reconnect = true;                
             } catch(IOException e) {
-                if(!desonnected) {
-//                    parent.error(e.getMessage(),"Connection lost");
-//                    parent.disconnect();
-//                	socket schließen
-                }
-                break;
+            	log.error(e);
+            	reconnect = true;
             } catch (CantChangeFieldValException e) {
             	log.error("Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");

@@ -50,7 +50,7 @@ public class AbasRueckmeldung implements Runnable {
 //		edp prozess session aufbauen
 		this.edpSession = EDPFactory.createEDPSession (); 
 		Boolean errorFlag = false;
-		while ((!errorFlag )) {
+		while (!errorFlag ) {
 			if (!waageConfiguration.pidFileexists()) {
 				log.info("pid-File existiert nicht mehr");
 				errorFlag = true;

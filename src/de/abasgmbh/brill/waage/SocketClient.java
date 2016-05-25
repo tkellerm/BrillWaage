@@ -87,15 +87,15 @@ public class SocketClient extends Thread {
 								waage.getPort());
 						this.socket.setKeepAlive(true);
 						this.socketadress = socket.getRemoteSocketAddress();
-						log.info("Die Waage" + waage.getName()
+						log.info(this.waageName + " Die Waage" + waage.getName()
 								+ " mit der IP-Adresse " + waage.getIpadress()
 								+ " wird nun überwacht");
 					} catch (Exception e) {
-						log.error("Die Socketverbindung zu Waage " + waageName + " mit IP " + waageIP + " konte nicht hergestellt werden", e);
+						log.error(this.waageName + " Die Socketverbindung zu Waage " + waageName + " mit IP " + waageIP + " konte nicht hergestellt werden", e);
 					}
 					
 				} else {
-					log.error("Die Waage" + waage.getName()
+					log.error(this.waageName + " Die Waage" + waage.getName()
 							+ " mit der IP-Adresse " + waage.getIpadress()
 							+ " ist nicht erreichbar");
 				}
@@ -130,12 +130,12 @@ public class SocketClient extends Thread {
         try {
             is = socket.getInputStream();
             in = new BufferedInputStream(is);
-            log.trace(waageName + " an Stream horchen" );
+            log.trace(this.waageName + " an Stream horchen" );
         } catch(IOException e) {
             try {
                 socket.close();
             } catch(IOException e2) {
-                System.err.println("Socket not closed :"+e2);
+                System.err.println(this.waageName +"Socket not closed :"+e2);
             }
             
             return;
@@ -146,37 +146,38 @@ public class SocketClient extends Thread {
         Boolean errorFlag =false;
         Boolean reconnect = false;
         while(!errorFlag) {
-        	log.trace("Schleife Socketclient");
+        	log.trace(this.waageName + "Schleife Socketclient");
 //        	Änderung da der direkte Aufruf von pidFileexists in die Hose ging.
         	if (!waageConfiguration.pidFileexists()) {
-				log.info("pid-File existiert nicht mehr");
+				log.info(this.waageName +"pid-File existiert nicht mehr");
 				File pidfile = waageConfiguration.getPidFile();
-				log.error("Das PID-File hat den Namen " + pidfile.getAbsolutePath() +" und das PID-Sicherung " + pidFileSicherung.getAbsolutePath());
+				log.error(this.waageName +"Das PID-File hat den Namen " + pidfile.getAbsolutePath() +" und das PID-Sicherung " + pidFileSicherung.getAbsolutePath());
 				if (!pidfile.exists()) {
-					log.error("Das pidfile existiert nicht!");
+					log.error(this.waageName +"Das pidfile existiert nicht!");
 					if (!pidFileSicherung.exists()) {
-						log.error("Das pidfileSicherung existiert auch nicht!");
+						log.error(this.waageName +"Das pidfileSicherung existiert auch nicht!");
 						errorFlag = true;	
 						
 					}else {
-						log.error("Das pidfileSicherung existiert!");
+						log.error(this.waageName +"Das pidfileSicherung existiert!");
 					}
 						
 				}
 				
 			}
         	if (!socket.isConnected()) {
-				log.error("Socket Verbindung zu Waage " + this.waageName + " mit IP " + this.waageIP + " wurde unterbrochen!");
+				log.error(this.waageName + " Socket Verbindung zu Waage " + this.waageName + " mit IP " + this.waageIP + " wurde unterbrochen!");
 				reconnect = true;
 			};
         	Rueckmeldung rueckMeldung=null;
         	 ArrayList<String> rueckschlange = new ArrayList<String>();
+        	 String inputString = null;
         	try {
-                String inputString = readInputStream(in); //in.readLine();
-                log.info(waageName + " : " + inputString);
+                inputString = readInputStream(in); //in.readLine();
+                log.info(this.waageName + " : " + inputString);
                 if(inputString== null || reconnect) {
                     //parent.error("Connection closed by client");
-                    log.error("Connection closed for waage " + waageName + " mit IP " + waageIP );
+                    log.error(this.waageName + " Connection closed for waage " + this.waageName + " mit IP " + waageIP );
 //                    boolean isCon = socket.isConnected();
 //                    boolean isbound = socket.isBound();
 //                    boolean isinputshutdown = socket.isInputShutdown();
@@ -185,17 +186,18 @@ public class SocketClient extends Thread {
                     Boolean newSocket = false;
                     while (!newSocket) {
 						try {
-							log.trace("Vor neuer Socketverbindung");							
+							log.trace(this.waageName +   " Vor neuer Socketverbindung");							
 							this.socket = new Socket(waageIP , waagePort );
 							this.socket.setKeepAlive(true);
-							log.trace("Nach neuer Socketverbindung");
+							log.trace(this.waageName +   " Nach neuer Socketverbindung");
 							is = socket.getInputStream();
 				            in = new BufferedInputStream(is);
 				            newSocket = true;
 						} catch (IOException e) {
-							log.error(waageName + "Connection not opend for waage " +  " mit IP " + waageIP , e );
+							log.error(this.waageName +   " Connection not opend for waage " +  " mit IP " + waageIP , e );
 						}	
 					}
+                    inputString = readInputStream(in);
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				
@@ -231,22 +233,29 @@ public class SocketClient extends Thread {
 						}
                 }else {
 //					Falls kein Anfangszeichen enthalten ist, wird auch keine Rückmeldung erzeugt.
-                	if (inputString.contains(ANFANGS_ZEICHEN)) {
-						String teilString[] = inputString.split(ANFANGS_ZEICHEN);
-						if (teilString.length > 1) {
-//							Der Start beginnt ja erst nach dem Startzeichen
-							for (int i = 1; i < teilString.length; i++) {
-								if (teilString[i].contains(ENDE_ZEICHEN)) {
-									rueckschlange.add(teilString[1]);
-									log.trace(this.waageName + " RückmeldungString : " + teilString[1]);
-									rueckMeldungActive = false;
-								}else {
-									rueckString = teilString[i];
-									rueckMeldungActive = true;
-								}	
-							}							
+                	
+                	if (inputString != null) {
+                		if (inputString.contains(ANFANGS_ZEICHEN)) {
+							String teilString[] = inputString.split(ANFANGS_ZEICHEN);
+							if (teilString.length > 1) {
+	//							Der Start beginnt ja erst nach dem Startzeichen
+								for (int i = 1; i < teilString.length; i++) {
+									if (teilString[i].contains(ENDE_ZEICHEN)) {
+										rueckschlange.add(teilString[1]);
+										log.trace(this.waageName + " RückmeldungString : " + teilString[1]);
+										rueckMeldungActive = false;
+									}else {
+										rueckString = teilString[i];
+										rueckMeldungActive = true;
+									}	
+								}							
+							}
 						}
+					}else {
+						log.error("Die Variable inputstring ist null.Es erfolgt einreconnect");
+						reconnect = true;
 					}
+	                	
 
 				}
                 }
@@ -288,32 +297,32 @@ public class SocketClient extends Thread {
                 }
                 rueckschlange.clear();
         	} catch(SocketException e) {
-            	log.error("Socketverbindung wurde unterbrochen!",e);
+            	log.error(this.waageName + "Socketverbindung wurde unterbrochen!",e);
             	reconnect = true;                
             } catch(IOException e) {
             	log.error(e);
             	reconnect = true;
             } catch (CantChangeFieldValException e) {
-            	log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+            	log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			} catch (CantBeginSessionException e) {
-				log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			} catch (CantBeginEditException e) {
-				log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			} catch (InvalidRowOperationException e) {
-				log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			} catch (CantSaveException e) {
-				log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			} catch (EDPException e) {
-				log.error("Rueckmeldung anlegen schiefgelaufen!", e);
+				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
 			}
         }//end of while
-        log.trace(waageName + " PID FILE nicht gefunden - Socketclient wird beendet");
+        log.trace(this.waageName + " PID FILE nicht gefunden - Socketclient wird beendet");
         try	{
             is.close();
             in.close();
@@ -339,7 +348,7 @@ public class SocketClient extends Thread {
 	private void sendText(String string) {
 		String befehl = "<CA" + string + "><NO" + textZeit.toString() + "><CC>";
     	sendMessage(befehl);
-    	log.info(waageName + " <CA" + " " + string);
+    	log.info(this.waageName + " <CA" + " " + string);
 		
 	}
 	
@@ -348,19 +357,19 @@ public class SocketClient extends Thread {
 //		<VS0020> löscht den Betriebsauftrag aus der Waage 
 		befehl = befehl + "<VS0020>";
     	sendMessage(befehl);
-    	log.info(waageName + " Waage zurücksetzen " + befehl);
+    	log.info(this.waageName + " Waage zurücksetzen " + befehl);
 	} 
 	private void labelDrucken(){
 		String befehl = "<FP099>";
     	sendMessage(befehl);
-    	log.info(waageName + " Label drucken" + " " + befehl);
+    	log.info(this.waageName  + " Label drucken" + " " + befehl);
 		
 	}
 	private void lampeAnschalten(LEDS led) {
 		// TODO Auto-generated method stub
     	String befehl = led.getAnschaltCmdString() + "<NO" + leuchtZeit.toString() + ">" + led.getAusschaltCmdString();
     	sendMessage(befehl);
-    	log.info(waageName + " Lampen Befehl : " + led.name() + " " + befehl);
+    	log.info(this.waageName + " Lampen Befehl : " + led.name() + " " + befehl);
 	}
 
 	private static String readInputStream(BufferedInputStream _in) throws IOException {

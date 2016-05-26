@@ -169,7 +169,7 @@ public class SocketClient extends Thread {
         	 ArrayList<String> rueckschlange = new ArrayList<String>();
         	 String inputString = null;
         	try {
-                inputString = readInputStream(in); //in.readLine();
+                inputString = readInputStream(in, this.waageName); //in.readLine();
                 log.info(this.waageName + " : " + inputString);
                 if(inputString== null || reconnect) {
                     //parent.error("Connection closed by client");
@@ -205,7 +205,7 @@ public class SocketClient extends Thread {
                     log.trace(this.waageName + " Vor lampeAnschalten PIEPSLEISE" );
                     lampeAnschalten(LEDS.PIEPSLEISE);
                     log.trace(this.waageName + " Vor readInputStream" );
-                    inputString = readInputStream(in);
+                    inputString = readInputStream(in, this.waageName);
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				
@@ -382,7 +382,7 @@ public class SocketClient extends Thread {
     	log.info(this.waageName + " Lampen Befehl : " + led.name() + " " + befehl);
 	}
 
-	private static String readInputStream(BufferedInputStream _in) throws IOException {
+	private static String readInputStream(BufferedInputStream _in,String _waageName) throws IOException {
         String data = "";
         int s = _in.read();
         if(s==-1)
@@ -394,7 +394,7 @@ public class SocketClient extends Thread {
             byte[] byteData = new byte[len];
             _in.read(byteData);
             data += new String(byteData);
-            log.trace(data);
+            log.trace( _waageName + " " + data);
 //            System.out.println(data);
         }
         return data;

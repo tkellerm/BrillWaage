@@ -200,9 +200,12 @@ public class SocketClient extends Thread {
 						}
 						log.trace(this.waageName + " Ende NewSocket Schleife" );
 					}
-                    inputString = readInputStream(in);
-//                    zum Testen Daten wegschicken, da dann eine Antwort erfolgt
+                    
+//                  zum Testen Daten wegschicken, da dann eine Antwort erfolgt
+                    log.trace(this.waageName + " Vor lampeAnschalten PIEPSLEISE" );
                     lampeAnschalten(LEDS.PIEPSLEISE);
+                    log.trace(this.waageName + " Vor readInputStream" );
+                    inputString = readInputStream(in);
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				

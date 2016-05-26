@@ -18,8 +18,6 @@ import javax.management.BadAttributeValueExpException;
 
 import org.apache.log4j.Logger;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-
 import de.abas.ceks.jedp.CantBeginEditException;
 import de.abas.ceks.jedp.CantBeginSessionException;
 import de.abas.ceks.jedp.CantChangeFieldValException;
@@ -43,7 +41,6 @@ public class SocketClient extends Thread {
     private static SocketClient socketClient=null;
     private Socket socket=null;
     private BufferedInputStream in;
-    private boolean desonnected=false;
     private PrintWriter out = null;
     private Integer leuchtZeit;
     private Integer textZeit;
@@ -55,7 +52,6 @@ public class SocketClient extends Thread {
 	private int waagePort;
     
     public synchronized void setDesonnected(boolean cr) {
-        desonnected=cr;
     }
     
     private SocketClient( Socket s) {
@@ -146,20 +142,20 @@ public class SocketClient extends Thread {
         Boolean errorFlag =false;
         Boolean reconnect = false;
         while(!errorFlag) {
-        	log.trace(this.waageName + "Schleife Socketclient");
+        	log.trace(this.waageName + " Schleife Socketclient");
 //        	Änderung da der direkte Aufruf von pidFileexists in die Hose ging.
         	if (!waageConfiguration.pidFileexists()) {
-				log.info(this.waageName +"pid-File existiert nicht mehr");
+				log.info(this.waageName +" pid-File existiert nicht mehr");
 				File pidfile = waageConfiguration.getPidFile();
-				log.error(this.waageName +"Das PID-File hat den Namen " + pidfile.getAbsolutePath() +" und das PID-Sicherung " + pidFileSicherung.getAbsolutePath());
+				log.error(this.waageName +" Das PID-File hat den Namen " + pidfile.getAbsolutePath() +" und das PID-Sicherung " + pidFileSicherung.getAbsolutePath());
 				if (!pidfile.exists()) {
-					log.error(this.waageName +"Das pidfile existiert nicht!");
+					log.error(this.waageName +" Das pidfile existiert nicht!");
 					if (!pidFileSicherung.exists()) {
-						log.error(this.waageName +"Das pidfileSicherung existiert auch nicht!");
+						log.error(this.waageName +" Das pidfileSicherung existiert auch nicht!");
 						errorFlag = true;	
 						
 					}else {
-						log.error(this.waageName +"Das pidfileSicherung existiert!");
+						log.error(this.waageName +" Das pidfileSicherung existiert!");
 					}
 						
 				}
@@ -191,13 +187,22 @@ public class SocketClient extends Thread {
 							this.socket.setKeepAlive(true);
 							log.trace(this.waageName +   " Nach neuer Socketverbindung");
 							is = socket.getInputStream();
+							log.trace(this.waageName +   " Nach getinputstream");
+//							Stream schliessen, bevor wieder geöffnet wird
+							in.close();
 				            in = new BufferedInputStream(is);
+				            log.trace(this.waageName +   " Nach BufferedInputstream");
 				            newSocket = true;
 						} catch (IOException e) {
 							log.error(this.waageName +   " Connection not opend for waage " +  " mit IP " + waageIP , e );
-						}	
+						} catch (Exception e){
+							log.error(this.waageName +   " neue Exception "  , e );
+						}
+						log.trace(this.waageName + " Ende NewSocket Schleife" );
 					}
                     inputString = readInputStream(in);
+//                    zum Testen Daten wegschicken, da dann eine Antwort erfolgt
+                    lampeAnschalten(LEDS.PIEPSLEISE);
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
 							+ " wird wieder überwacht");    				
@@ -320,6 +325,8 @@ public class SocketClient extends Thread {
 			} catch (EDPException e) {
 				log.error(this.waageName + "Rueckmeldung anlegen schiefgelaufen!", e);
 				fehlerAnWaage("Rueckmeldung nicht erfolgreich");
+			}catch (Exception e){
+				log.error(this.waageName + " unbekannte Exception 2", e);
 			}
         }//end of while
         log.trace(this.waageName + " PID FILE nicht gefunden - Socketclient wird beendet");

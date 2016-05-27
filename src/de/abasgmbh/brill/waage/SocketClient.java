@@ -203,7 +203,7 @@ public class SocketClient extends Thread {
                     
 //                  zum Testen Daten wegschicken, da dann eine Antwort erfolgt
                     log.trace(this.waageName + " Vor lampeAnschalten PIEPSLEISE" );
-                    lampeAnschalten(LEDS.PIEPSLEISE);
+                    TestSocket testSocket = new TestSocket(socket, this.waageName);
                     log.trace(this.waageName + " Vor readInputStream" );
                     inputString = readInputStream(in, this.waageName);
                     log.info("Die Waage" + this.waageName
@@ -400,7 +400,7 @@ public class SocketClient extends Thread {
         return data;
     }
     
-    public void sendMessage(String s) {
+    private void sendMessage(String s) {
     	
         try	{
         	

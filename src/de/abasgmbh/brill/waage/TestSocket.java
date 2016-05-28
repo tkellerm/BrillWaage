@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
 
@@ -27,18 +28,18 @@ public class TestSocket extends Thread {
 	@Override
 	public void run() {
 		try {
-			log.trace(this.waageName + " TestSocketClient for Sleep");
-			Thread.sleep(2000);
-			log.trace(this.waageName + " TestSocketClient for PIEPSLEISE");
-			lampeAnschalten(LEDS.PIEPSLEISE);
+			Date date = new Date();
+			log.trace(this.waageName + " TestSocketClient for Sschleife" + new Date().toString() );
+			for (int i = 0; i < 20; i++) {
+				Thread.sleep(2000);
+				log.trace(this.waageName + " TestSocketClient for PIEPSLEISE" + new Date().toString());
+				lampeAnschalten(LEDS.PIEPSLEISE);	
+			}
+			
 		} catch (InterruptedException e) {
 			log.error(this.waageName , e);
 		}
-
-		
 	}
-
-	
 	
 	void lampeAnschalten(LEDS led) {
 		// TODO Auto-generated method stub

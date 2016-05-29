@@ -82,12 +82,10 @@ public class SocketClient extends Thread {
 						this.socket = new Socket(waage.getIpadress(),
 								waage.getPort());
 						this.socket.setKeepAlive(true);
-						
-						this.socket.setSoTimeout(5*1000);				
 						this.socketadress = socket.getRemoteSocketAddress();
 						log.info(this.waageName + " Die Waage" + waage.getName()
 								+ " mit der IP-Adresse " + waage.getIpadress()
-								+ " wird nun überwacht mit " + this.socket.getSoTimeout() + "ms Timeout");
+								+ " wird nun überwacht");
 					} catch (Exception e) {
 						log.error(this.waageName + " Die Socketverbindung zu Waage " + waageName + " mit IP " + waageIP + " konte nicht hergestellt werden", e);
 					}
@@ -187,7 +185,6 @@ public class SocketClient extends Thread {
 							log.trace(this.waageName +   " Vor neuer Socketverbindung");							
 							this.socket = new Socket(waageIP , waagePort );
 							this.socket.setKeepAlive(true);
-							this.socket.setSoTimeout(5*1000);				
 							log.trace(this.waageName +   " Nach neuer Socketverbindung");
 							is = socket.getInputStream();
 							log.trace(this.waageName +   " Nach getinputstream");

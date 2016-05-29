@@ -414,7 +414,7 @@ public class SocketClient extends Thread {
         
             
         } catch (Exception e) {
-            
+            log.error(this.waageName, e);
             try {
 				socket.close();
 			} catch (IOException e1) { 

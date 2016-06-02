@@ -40,7 +40,6 @@ public class SocketClient extends Thread {
 	
     private static SocketClient socketClient=null;
     private Socket socket=null;
-    private BufferedInputStream in;
     private PrintWriter out = null;
     private Integer leuchtZeit;
     private Integer textZeit;
@@ -62,7 +61,7 @@ public class SocketClient extends Thread {
     }
     
     public SocketClient(WaageConfiguration waageConfiguration, Integer waagenindex, AbasRueckmeldung abasrueck) throws UnknownHostException{
-    	super("SocketClient");
+    	super("SocketClient ");
     	Waage waage = null;
 		try {
 			this.waageConfiguration = waageConfiguration;
@@ -75,7 +74,7 @@ public class SocketClient extends Thread {
 	    	this.waageName = waage.getName();
 	    	this.waageIP = waage.getIpadress();
 	    	this.waagePort = waage.getPort();
-	    	
+	    	super.setName("TestSocket " + waageName + " " + super.getId());
 	    	while (this.socket == null) {
 				if (checkHost(waage.getIpadress())) {
 					try {
@@ -122,16 +121,19 @@ public class SocketClient extends Thread {
     }
     
     public void run() {
+    	BufferedInputStream in;
         InputStream is = null;
         try {
             is = socket.getInputStream();
             in = new BufferedInputStream(is);
             log.trace(this.waageName + " an Stream horchen" );
         } catch(IOException e) {
-            try {
+            log.error(this.waageName + " Verbindungsaufbau geht schief", e);
+        	try {
+     
                 socket.close();
             } catch(IOException e2) {
-                System.err.println(this.waageName +"Socket not closed :"+e2);
+                log.error(this.waageName +"Socket not closed :"+e2);
             }
             
             return;
@@ -141,6 +143,7 @@ public class SocketClient extends Thread {
         Boolean rueckMeldungActive = false;
         Boolean errorFlag =false;
         Boolean reconnect = false;
+      
         while(!errorFlag) {
         	log.trace(this.waageName + " Schleife Socketclient");
 //        	Änderung da der direkte Aufruf von pidFileexists in die Hose ging.
@@ -179,6 +182,8 @@ public class SocketClient extends Thread {
 //                    boolean isinputshutdown = socket.isInputShutdown();
 //                    boolean isoutputshutdown = socket.isOutputShutdown();
                     socket.close();
+                    in.close();
+                    is.close();
                     Boolean newSocket = false;
                     while (!newSocket) {
 						try {
@@ -208,7 +213,8 @@ public class SocketClient extends Thread {
                     inputString = readInputStream(in, this.waageName);
                     log.info("Die Waage" + this.waageName
 							+ " mit der IP-Adresse " + waageIP
-							+ " wird wieder überwacht");    				
+							+ " wird wieder überwacht");
+                    reconnect = false;
                 }
                 
                 if (rueckString != null) {				

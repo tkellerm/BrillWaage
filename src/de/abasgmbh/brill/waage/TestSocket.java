@@ -21,6 +21,7 @@ public class TestSocket extends Thread {
 		this.socket = socket;
 		this.waageName = waageName;
 		log.info(this.waageName + " Constructor TestSocketClient");
+		super.setName("TestSocket " + waageName + " " + super.getId());
 		start();
 	}
 	
@@ -29,8 +30,8 @@ public class TestSocket extends Thread {
 	public void run() {
 		try {
 			Date date = new Date();
-			log.trace(this.waageName + " TestSocketClient for Sschleife" + new Date().toString() );
-			for (int i = 0; i < 20; i++) {
+			log.trace(this.waageName + " TestSocketClient for Schleife" + new Date().toString() );
+			for (int i = 0; i < 2; i++) {
 				Thread.sleep(2000);
 				log.trace(this.waageName + " TestSocketClient for PIEPSLEISE" + new Date().toString());
 				lampeAnschalten(LEDS.PIEPSLEISE);	
